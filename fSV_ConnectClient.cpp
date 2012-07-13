@@ -126,7 +126,7 @@ void ConnectClient_HookHandler()
 
 		call IsConnectionAllowed
 		test eax, eax
-		jz good
+		jnz good
 
 		retn
 
@@ -148,7 +148,7 @@ good:	push ebp
 		"movl IsConnectionAllowed, %%eax;"
 		"call *%%eax;"
 		"test %%eax, %%eax;"
-		"jz good;"
+		"jnz good;"
 		"ret;"
 
 		"good: pushl %%ebp;"
