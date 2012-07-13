@@ -1,0 +1,10 @@
+.wad
+.txt
+.bsp
+.mdl
+spr
+tga
+bmp
+wav
+mp3
+.res
