@@ -93,7 +93,7 @@ void CmdGetBannedList(void)
 	SERVER_PRINT("[FloodBlocker]: List of banned ips:\n");
 	for (it = connections.begin(); it != connections.end(); ++it)
 	{
-		if (it->second.first > 5 && time(NULL) - it->second.second < 5*60*1000)
+		if (it->second.first > 5 && time(NULL) - it->second.second < 5*60)
 		{
 			std::ostringstream ip;
 			ip	<< ((it->first)&0x000000FF) 			<< '.'
