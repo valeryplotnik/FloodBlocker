@@ -9,30 +9,55 @@
 #include "fIsSafeFileToDownload.h"
 
 #if defined _WIN32
-	engFunc is_safe_file = 
+	function is_safe_file = 
 	{
-		"\x55\x8B\xEC\x56\x8B\x75\x08\x85\xF6\x57\x0F\x84\xCA\x01\x00\x00\x6A\x04\x68\x4C\x4B\xE6\x01"
-		"\x56\xE8\xD3\x57\xF9\xFF\x83\xC4\x0C\x85\xC0\x75\x09\x5F\xB8\x01\x00\x00\x00\x5E\x5D\xC3",
-
-		"xxxxxxxxxxxx????xxx????xx????xxxxxxxxxxxxxxxx", 45, {}, {}, 0, (unsigned char *)IsSafeFile_HookHandler, "IsSafeFileToDownload", 0
+		"IsSafeFileToDownload", //name
+		&swds, //lib
+		
+		{
+			"\x55\x8B\xEC\x56\x8B\x75\x08\x85\xF6\x57\x0F\x84\xCA\x01\x00\x00\x6A\x04\x68\x4C\x4B\xE6\x01"
+			"\x56\xE8\xD3\x57\xF9\xFF\x83\xC4\x0C\x85\xC0\x75\x09\x5F\xB8\x01\x00\x00\x00\x5E\x5D\xC3",
+			"xxxxxxxxxxxx????xxx????xx????xxxxxxxxxxxxxxxx", 
+			45
+		}, //signature
+		
+		NULL, //address
+		(void*)IsSafeFile_HookHandler, //handler
+		
+		{}, {}, //bytes
+		
+		0 //done
 	};
 #else
-	engFunc is_safe_file = 
+	function is_safe_file = 
 	{
-		"\x83\xEC\x14\x56\x53\x8B\x74\x24\x20\x85\xF6\x0F\x84\x2F\x02\x00\x00\x83\xC4\xFC"
-		"\x6A\x04\x68\x24\x61\x0C\x00\x56\xE8\x7F\xF8\xFB\xFF\x83\xC4\x10\x85\xC0\x0F\x84"
-		"\x0B\x02\x00\x00\x83\xC4\xF8\x68\xCF\x51\x0C\x00",
+		"IsSafeFileToDownload", //name
+		&swds, //lib
+		
+		{
+			"\x83\xEC\x14\x56\x53\x8B\x74\x24\x20\x85\xF6\x0F\x84\x2F\x02\x00\x00\x83\xC4\xFC"
+			"\x6A\x04\x68\x24\x61\x0C\x00\x56\xE8\x7F\xF8\xFB\xFF\x83\xC4\x10\x85\xC0\x0F\x84"
+			"\x0B\x02\x00\x00\x83\xC4\xF8\x68\xCF\x51\x0C\x00",
 
-		"xxxxxxxxxxxxx????xxxxxx????xx????xxxxxxx????xxxx????", 52, {}, {}, 0, (unsigned char *)IsSafeFile_HookHandler, "IsSafeFileToDownload", 0
+			"xxxxxxxxxxxxx????xxxxxx????xx????xxxxxxx????xxxx????", 52
+		}, //signature
+		
+		NULL, //address
+		(void*)IsSafeFile_HookHandler, //handler
+		
+		{}, {}, //bytes
+		
+		0 //done
 	};
 #endif
 
 std::vector <std::string *> goodexts;
 
-void CacheFileExts()
+void CacheFileExts(void)
 {
 	if (CVAR_GET_FLOAT("developer") != 0.0)
 		ALERT(at_logged, "[Floodblocker]: Caching good extensions.\n");
+	
 	std::ifstream goodextsfile("cstrike/goodexts.txt");
 	if (goodextsfile.is_open())
 	{
@@ -51,7 +76,7 @@ void CacheFileExts()
 	}
 }
 
-void PrintGoodExts()
+void PrintGoodExts(void)
 {
 	if (goodexts.size() == 0)
 	{
@@ -68,7 +93,7 @@ void PrintGoodExts()
 	}
 }
 
-C_DLLEXPORT DLLVISIBLE int IsSafeFile(char *filename)
+C_DLLEXPORT DLLVISIBLE int IsSafeFile(const char *filename)
 {
 	if (CVAR_GET_FLOAT("developer") != 0.0)
 		ALERT(at_logged, "[Floodblocker]: Check next filename for downloading: %s\n", filename);
@@ -83,7 +108,7 @@ C_DLLEXPORT DLLVISIBLE int IsSafeFile(char *filename)
 #if defined _MSC_VER
 	__declspec( naked ) 
 #endif
-void IsSafeFile_HookHandler()
+void IsSafeFile_HookHandler(const char* filename)
 {
 #if defined _MSC_VER
 	__asm
@@ -102,12 +127,12 @@ good:	push ebp
 		push esi
 		mov esi, dword ptr [ebp+8]
 
-		mov ecx, is_safe_file.oFunc
+		mov ecx, is_safe_file.address
 		add ecx, 7
 		jmp ecx
 	}
 #else
-	__asm__ __volatile__ 
+	/*__asm__ __volatile__ 
 	(		
 		"pushl 0x4(%%esp);"
 		"movl IsSafeFile, %%eax;"
@@ -123,12 +148,20 @@ good:	push ebp
 		"pushl %%esi;"
 		"pushl %%ebx;"
 
-		"movl %0, %%ecx;"
-		"addl $5, %%ecx;"
-		"jmp *%%ecx;"
+		"movl %0, %%eax;"
+		"addl $5, %%eax;"
+		"jmp *%%eax;"
 		:
 		:
-		"m" (is_safe_file.oFunc)
-	);
+		"m" (is_safe_file.address)
+	);*/
+	if (IsSafeFile(filename))
+	{
+		UnsetHook(&is_safe_file);
+		((void (*)(const char*))is_safe_file.address)(filename);
+		SetHook(&is_safe_file);
+	}
+	else
+		return;
 #endif
 }

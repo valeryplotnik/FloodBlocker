@@ -3,38 +3,33 @@
 #include <extdll.h>
 #include <meta_api.h>
 
-int				isBaseSet = false;
-unsigned char*	swds_base;
-size_t			swds_base_len;
+module swds = {NULL, 0};
 
 #if defined _WIN32
-BOOL FindEngineBase(void* func)
+int FindModuleByAddr (void *addr, module *lib)
 {
 	MEMORY_BASIC_INFORMATION mem;
-    VirtualQuery(func, &mem, sizeof(mem));
+    VirtualQuery(addr, &mem, sizeof(mem));
  
     IMAGE_DOS_HEADER *dos = (IMAGE_DOS_HEADER*)mem.AllocationBase;
     IMAGE_NT_HEADERS *pe = (IMAGE_NT_HEADERS*)((unsigned long)dos+(unsigned long)dos->e_lfanew);
  
-    if(pe->Signature != IMAGE_NT_SIGNATURE) {
-        swds_base = (unsigned char*)NULL;
-		swds_base_len = 0;
+    if(pe->Signature != IMAGE_NT_SIGNATURE)
+    {
+		return FALSE;
+	}
+	else
+	{
+		lib->base = mem.AllocationBase;
+		lib->size = (size_t)pe->OptionalHeader.SizeOfImage;
 
-		ALERT(at_logged, "[FloodBlocker]: Base search failed.\n");
-
-		return (isBaseSet = FALSE);
-
-	} else {
-		swds_base = (unsigned char*)mem.AllocationBase;
-		swds_base_len = (size_t)pe->OptionalHeader.SizeOfImage;
-
-		return (isBaseSet = TRUE);
+		return TRUE;
 	}
 }
 #else
 // Code derived from code from David Anderson
 // You're going to help us, Mr. Anderson whether you want to or not. (c)
-DLLINTERNAL long getBaseLen(void *baseAddress)
+long getBaseLen(void *baseAddress)
 {
 	pid_t pid = getpid();
 	char file[255];
@@ -45,8 +40,8 @@ DLLINTERNAL long getBaseLen(void *baseAddress)
 	{
 		long length = 0;
 
-		void *start=NULL;
-		void *end=NULL;
+		void *start = NULL;
+		void *end = NULL;
 
 		while (!feof(fp))
 		{
@@ -98,41 +93,47 @@ DLLINTERNAL long getBaseLen(void *baseAddress)
 	return 0;
 }
 
-DLLINTERNAL int FindEngineBase(void* func)
+int FindModuleByAddr (void *addr, module *lib)
 {
+	if (!lib)
+		return FALSE;
+	
 	Dl_info info;
 
-	if(!dladdr(func, &info) && !info.dli_fbase || !info.dli_fname)
+	if (!dladdr(addr, &info) && !info.dli_fbase || !info.dli_fname)
 	{
-		swds_base = NULL;
-		swds_base_len = 0;
-		
-		ALERT(at_logged, "[FloodBlocker]: Base search failed.\n");
+		return FALSE;
+	}
+	else
+	{
+		lib->base = info.dli_fbase;
+		lib->size = (size_t)getBaseLen(lib->base);
 
-		return (isBaseSet = 0);
-	} else {
-		swds_base = (unsigned char*)info.dli_fbase;
-		swds_base_len = getBaseLen(swds_base);
-
-		return (isBaseSet = 1);
+		return TRUE;
 	}
 }
 #endif
 
-DLLINTERNAL void* FindFunction (const char *sig_str, const char *sig_mask, size_t sig_len)
+void *FindFunction (module *lib, signature sig)
 {
-	unsigned char* pBuff = swds_base;
-	unsigned char* pEnd = swds_base+swds_base_len-sig_len;
+	if (!lib)
+		return NULL;
+	
+	if (!sig.text || !sig.mask || sig.size == 0)
+		return NULL;
+	
+	unsigned char *pBuff = (unsigned char *)lib->base;
+	unsigned char *pEnd = (unsigned char *)lib->base+lib->size-sig.size;
 
 	unsigned long i;
-	while(pBuff < pEnd)
+	while (pBuff < pEnd)
 	{
-		for(i = 0; i < sig_len; i++) {
-			if((sig_mask[i] != '?') && ((unsigned char)(sig_str[i]) != pBuff[i]))
+		for (i = 0; i < sig.size; i++) {
+			if ((sig.mask[i] != '?') && ((unsigned char)(sig.text[i]) != pBuff[i]))
 				break;
 		}
 
-		if(i == sig_len)
+		if (i == sig.size)
 			return (void*)pBuff;
 
 		pBuff++;
@@ -141,49 +142,73 @@ DLLINTERNAL void* FindFunction (const char *sig_str, const char *sig_mask, size_
     return NULL;
 }
 
-DLLINTERNAL void setHook(engFunc *func)
+void *FindFunction (module *lib, const char *name)
 {
-	if(AllowWriteToMemory(func->oFunc))
-		memcpy(func->oFunc, func->pBytes, 5);
+	if (!lib)
+		return NULL;
+	
+	return DLSYM(lib->base, name);
 }
 
-DLLINTERNAL void unsetHook(engFunc *func)
+void *FindFunction (function *func)
 {
-	if(AllowWriteToMemory(func->oFunc))
-		memcpy(func->oFunc, func->oBytes, 5);
+	if (!func)
+		return NULL;
+	
+	return FindFunction(func->lib, func->sig);
+	/* FIX : add dlsym finding
+	void *address = NULL;
+	if (NULL == (address = FindFunction(func->lib, func->name)))
+	{
+		return FindFunction(func->lib, func->sig);
+	}
+	if (CVAR_GET_FLOAT("developer") != 0.0)
+			ALERT(at_logged, "[Floodblocker]: Function %s founded by NAME\n", func->name);
+	return address;*/
 }
 
-DLLINTERNAL int CreateFunctionHook(engFunc *func)
+void SetHook(function *func)
 {
-	if(0 == isBaseSet)
+	if(AllowWriteToMemory(func->address))
+		memcpy(func->address, func->patch, 5);
+}
+
+void UnsetHook(function *func)
+{
+	if(AllowWriteToMemory(func->address))
+		memcpy(func->address, func->origin, 5);
+}
+
+int CreateFunctionHook(function *func)
+{
+	if (!func)
 		return 0;
 
-	if(0 != (func->oFunc = (unsigned char*)FindFunction(func->sig_str, func->sig_mask, func->sig_len)))
+	if (NULL != (func->address = (unsigned char*)FindFunction(func)))
 	{
-		memcpy((void*)func->oBytes, (void*)func->oFunc, 5);
+		memcpy(func->origin, func->address, 5);
 		
-		func->pBytes[0]=0xE9;
-		*(unsigned long *)&func->pBytes[1] = (unsigned long)func->hFunc-(unsigned long)func->oFunc-5;
-
-		ALERT(at_logged, "[Floodblocker]: Function %s founded at 0x%08X\n", func->fn_name, (unsigned long)func->oFunc);
+		func->patch[0]=0xE9;
+		*(unsigned long *)&func->patch[1] = (unsigned long)func->handler-(unsigned long)func->address-5;
 		
-		return (func->done = 1);
-
-	} else {
-		ALERT(at_logged, "[FloodBlocker]: Function search failed(no function founded).\n");
-		return (func->done = 0);
+		if (CVAR_GET_FLOAT("developer") != 0.0)
+			ALERT(at_logged, "[Floodblocker]: Function %s founded at %08X\n", func->name, (unsigned long)func->address);
+		
+		return (func->done = TRUE);
 	}
+	else
+		return (func->done = FALSE);
 }
 
-DLLINTERNAL int AllowWriteToMemory(void *addr)
+int AllowWriteToMemory(void *address)
 {
 #if defined _WIN32
 	DWORD OldProtection, NewProtection = PAGE_EXECUTE_READWRITE;
-	if(VirtualProtect(addr, 5, NewProtection, &OldProtection))
+	if (VirtualProtect(address, 5, NewProtection, &OldProtection))
 #else
-	void* alignedAddress = Align(addr);
-	if(!mprotect(alignedAddress, sysconf(_SC_PAGESIZE), (PROT_READ | PROT_WRITE | PROT_EXEC)))
+	void* alignedAddress = Align(address);
+	if (!mprotect(alignedAddress, sysconf(_SC_PAGESIZE), (PROT_READ | PROT_WRITE | PROT_EXEC)))
 #endif
-			return(TRUE);
-	return(FALSE);
+		return TRUE;
+	return FALSE;
 }

@@ -2,8 +2,9 @@
 #define _SV_CONNECT_CLIENT_H
 
 #include "engFunc.h"
-extern engFunc sv_connect_client;
+extern function sv_connect_client;
 
-void ConnectClient_HookHandler();
+void ConnectClient_HookHandler(void);
+void CmdGetBannedList(void);
 
 #endif //_SV_CONNECT_CLIENT_H

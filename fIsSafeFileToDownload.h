@@ -2,9 +2,10 @@
 #define _IS_SAFE_FILE_H
 
 #include "engFunc.h"
-extern engFunc is_safe_file;
+extern function is_safe_file;
 
-void IsSafeFile_HookHandler();
-void CacheFileExts();
+void IsSafeFile_HookHandler(const char* filename);
+void CacheFileExts(void);
+void PrintGoodExts(void);
 
 #endif //_IS_SAFE_FILE_H

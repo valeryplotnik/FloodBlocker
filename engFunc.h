@@ -1,5 +1,5 @@
-#ifndef _ENG_FUNC_H
-#define _ENG_FUNC_H
+#ifndef _ENGINE_H
+#define _ENGINE_H
 
 #if defined _WIN32
 	#include <windows.h>
@@ -14,33 +14,47 @@
 	#define Align(addr) (void*)((long)addr & ~(PAGE_SIZE-1))
 #endif
 
-struct engFunc
+struct module
 {
-	const char       *sig_str;
-	const char       *sig_mask;
-	size_t           sig_len;
+	void             *base;
+	size_t           size;
+};
+
+struct signature
+{
+	const char       *text;
+	const char       *mask;
+	size_t           size;
+};
+
+struct function
+{
+	const char       *name;
 	
-	unsigned char    pBytes[5];
-	unsigned char    oBytes[5];
-
-	unsigned char    *oFunc;
-	unsigned char    *hFunc;
-
-	const char       *fn_name;
+	module           *lib;
+	
+	signature        sig;
+	
+	void             *address;
+	void             *handler;
+	
+	unsigned char    patch[5];
+	unsigned char    origin[5];
 
 	int              done;
 };
 
-extern unsigned char    *swds_base;
-extern size_t           swds_base_len;
-extern int              isBaseSet;
+int FindModuleByAddr (void *addr, module *lib);
+void *FindFunction (module *lib, signature sig);
+void *FindFunction (module *lib, const char *name);
+void *FindFunction (function *func);
 
-int FindEngineBase (void *addr);
-void* FindFunction (const char *sig_str, const char *sig_mask, size_t sig_len);
+void SetHook (function *func);
+void UnsetHook (function *func);
 
-void unsetHook (engFunc *func);
-void setHook (engFunc *func);
-int CreateFunctionHook (engFunc *func);
-int AllowWriteToMemory (void *addr);
+int CreateFunctionHook (function *func);
+int AllowWriteToMemory (void *address);
 
-#endif // _ENG_FUNC_H
+extern module swds;
+
+#endif // _ENGINE_H
