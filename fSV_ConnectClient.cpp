@@ -118,7 +118,7 @@ C_DLLEXPORT DLLVISIBLE int IsConnectionAllowed(void)
 	if (CVAR_GET_FLOAT("developer") != 0.0)
 		ALERT(at_logged, "[Floodblocker]: IP address %s connects %d time for last 15 seconds\n", ip.str().c_str(), connections[net_from->ipaddress].first+1);
 
-	if(time(NULL)-connections[net_from->ipaddress].second > 15000)
+	if(time(NULL)-connections[net_from->ipaddress].second > 15)
 	{
 		connections[net_from->ipaddress].first = 0;
 		connections[net_from->ipaddress].second = time(NULL);
@@ -129,9 +129,11 @@ C_DLLEXPORT DLLVISIBLE int IsConnectionAllowed(void)
 		SERVER_PRINT("[Floodblocker]: IP address ");
 		SERVER_PRINT(ip.str().c_str());
 		SERVER_PRINT(" exceedes connection limit\nBanned for 5 minutes\n");
+		
 		std::ostringstream cmd;
 		cmd << "addip 5 " << ip.str().c_str() << std::endl;
 		SERVER_COMMAND((char*)cmd.str().c_str());
+
 		return FALSE;
 	}
 
