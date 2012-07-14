@@ -147,7 +147,7 @@ void *FindFunction (module *lib, const char *name)
 	if (!lib)
 		return NULL;
 	
-	return DLSYM(lib->base, name);
+	return DLSYM((DLHANDLE)lib->base, name);
 }
 
 void *FindFunction (function *func)
