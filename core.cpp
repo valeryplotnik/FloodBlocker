@@ -79,7 +79,7 @@ C_DLLEXPORT DLLVISIBLE int Meta_Attach(PLUG_LOADTIME now, META_FUNCTIONS *pFunct
 			if (CVAR_GET_FLOAT("developer") != 0.0)
 				ALERT(at_logged, "[FloodBlocker]: Function SV_ConnectClient not founded.\n");
 			
-			return FALSE;
+		//	return FALSE;
 		}
 
 		if(CreateFunctionHook(&is_safe_file))
@@ -91,7 +91,7 @@ C_DLLEXPORT DLLVISIBLE int Meta_Attach(PLUG_LOADTIME now, META_FUNCTIONS *pFunct
 			if (CVAR_GET_FLOAT("developer") != 0.0)
 				ALERT(at_logged, "[FloodBlocker]: Function IsSafeFileToDownload not founded.\n");
 		
-			return FALSE;
+	//		return FALSE;
 		}
 	} 
 	else
