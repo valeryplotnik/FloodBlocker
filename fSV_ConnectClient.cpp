@@ -9,54 +9,34 @@
 
 #include "fSV_ConnectClient.h"
 
-#if defined _WIN32
-	function sv_connect_client = 
-	{
-		"SV_ConnectClient", //name
-		&swds, //lib
-		
-		{
-		
-			"\x55\x8B\xEC\x81\xEC\x90\x0E\x00\x00\x53\x56\x57\xB9\x05\x00\x00\x00"
-			"\xBE\x20\xD6\x56\x02\x8D\x7D\xDC\x33\xDB\x68\xE4\x56\xE6\x01\xF3\xA5",
-			"xxxxx????xxxxxxxxx????xx?xxx????xx", 
-			34
-		}, //signature
-		
-		NULL, //address
-		(void*)ConnectClient_HookHandler, //handler
-		
-		{}, {}, //bytes
-		
-		0 //done
-	};
-#else
-	function sv_connect_client = 
-	{
-		"SV_ConnectClient", //name
-		&swds, //lib
-		
-		{
-			"\x55\x89\xE5\x81\xEC\xBC\x0E\x00\x00\x57\x56\x53\xC7\x85\x7C\xF1\xFF\xFF\x00\x00"
-			"\x00\x00\xC7\x85\x84\xF1\xFF\xFF\xFF\xFF\xFF\xFF\xC7\x85\x74\xF1\xFF\xFF\x00\x00"
-			"\x00\x00\x8D\x7D\xEC\xBE\x78\x74\x54\x00\xFC\xB9\x05\x00\x00\x00\xF3\xA5",
-			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx????xxxxxxxx", 
-			58,
-		}, //signature
-		
-		NULL, //address
-		(void*)ConnectClient_HookHandler, //handler
-		
-		{}, {}, //bytes
-		
-		0 //done
-	};
-#endif
 
-//key - ip address
-//first pair value - connection count in 15 seconds, since
-//second pair value - first connect time
-std::map< int, std::pair<int,time_t> > connections;
+function sv_connect_client = 
+{
+	"SV_ConnectClient", //name
+	&swds, //lib
+
+	{
+	#if defined _WIN32
+		"\x55\x8B\xEC\x81\xEC\x90\x0E\x00\x00\x53\x56\x57\xB9\x05\x00\x00\x00"
+		"\xBE\x20\xD6\x56\x02\x8D\x7D\xDC\x33\xDB\x68\xE4\x56\xE6\x01\xF3\xA5",
+		"xxxxx????xxxxxxxxx????xx?xxx????xx", 
+		34
+	#else
+		"\x55\x89\xE5\x81\xEC\xBC\x0E\x00\x00\x57\x56\x53\xC7\x85\x7C\xF1\xFF\xFF\x00\x00"
+		"\x00\x00\xC7\x85\x84\xF1\xFF\xFF\xFF\xFF\xFF\xFF\xC7\x85\x74\xF1\xFF\xFF\x00\x00"
+		"\x00\x00\x8D\x7D\xEC\xBE\x78\x74\x54\x00\xFC\xB9\x05\x00\x00\x00\xF3\xA5",
+		"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx????xxxxxxxx", 
+		58,
+	#endif
+	}, //signature
+
+	NULL, //address
+	(void*)ConnectClient_HookHandler, //handler
+
+	{}, {}, //bytes
+
+	0 //done
+};
 
 enum netadrtype_t
 {
@@ -80,6 +60,10 @@ typedef struct netadr_s
 } netadr_t;
 
 netadr_t* net_from;
+//key - ip address
+//first pair value - connection count in 15 seconds, since
+//second pair value - first connect time
+std::map< int, std::pair<int,time_t> > connections;
 
 void CmdGetBannedList(void)
 {
