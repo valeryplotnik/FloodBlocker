@@ -3,7 +3,7 @@
 #include <extdll.h>
 #include <meta_api.h>
 
-module swds = {NULL, 0};
+module swds = {NULL, 0, NULL};
 
 #if defined _WIN32
 int FindModuleByAddr (void *addr, module *lib)
@@ -22,6 +22,7 @@ int FindModuleByAddr (void *addr, module *lib)
 	{
 		lib->base = mem.AllocationBase;
 		lib->size = (size_t)pe->OptionalHeader.SizeOfImage;
+		lib->handler = lib->base;
 
 		return TRUE;
 	}
@@ -108,6 +109,7 @@ int FindModuleByAddr (void *addr, module *lib)
 	{
 		lib->base = info.dli_fbase;
 		lib->size = (size_t)getBaseLen(lib->base);
+		lib->handler = dlopen(info.dli_fname, RTLD_NOW);
 
 		return TRUE;
 	}
@@ -147,7 +149,7 @@ void *FindFunction (module *lib, const char *name)
 	if (!lib)
 		return NULL;
 	
-	return DLSYM((DLHANDLE)lib->base, name);
+	return DLSYM((DLHANDLE)lib->handler, name);
 }
 
 void *FindFunction (function *func)
@@ -155,8 +157,6 @@ void *FindFunction (function *func)
 	if (!func)
 		return NULL;
 	
-	return FindFunction(func->lib, func->sig);
-	/* FIX : add dlsym finding
 	void *address = NULL;
 	if (NULL == (address = FindFunction(func->lib, func->name)))
 	{
@@ -164,7 +164,7 @@ void *FindFunction (function *func)
 	}
 	if (CVAR_GET_FLOAT("developer") != 0.0)
 			ALERT(at_logged, "[Floodblocker]: Function %s founded by NAME\n", func->name);
-	return address;*/
+	return address;
 }
 
 void SetHook(function *func)

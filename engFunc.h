@@ -18,6 +18,7 @@ struct module
 {
 	void             *base;
 	size_t           size;
+	void             *handler;
 };
 
 struct signature
