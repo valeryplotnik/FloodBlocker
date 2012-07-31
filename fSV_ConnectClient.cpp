@@ -1,6 +1,5 @@
 #include <extdll.h>
 #include <meta_api.h>
-#include <comp_dep.h>
 
 #include <ctime>
 #include <map>
@@ -38,26 +37,6 @@ function sv_connect_client =
 	0 //done
 };
 
-enum netadrtype_t
-{
-  NA_UNUSED = 0x0,
-  NA_LOOPBACK = 0x1,
-  NA_BROADCAST = 0x2,
-  NA_IP = 0x3,
-  NA_IPX = 0x4,
-  NA_BROADCAST_IPX = 0x5,
-};
-
-typedef struct netadr_s
-{
-  netadrtype_t address_type;
-  int ipaddress;
-  int protoid;
-  short netadr_field4;
-  short netadr_field5;
-  short netadr_field6;
-  unsigned short port;
-} netadr_t;
 
 netadr_t* net_from;
 //key - ip address
@@ -177,14 +156,6 @@ good:	push ebp
 		"m" (sv_connect_client.address),
 		"m" (sv_connect_client.address)
 	);*/
-	__asm__ __volatile__ 
-	(		
-		"movl %1, %%eax;"
-		"movl 0x2E(%%eax), %%eax;"
-		"movl %%eax, %0;"
-		:"=m" (net_from)
-		:"m" (sv_connect_client.address)
-	);
 	
 	if (IsConnectionAllowed())
 	{
@@ -194,6 +165,5 @@ good:	push ebp
 	}
 	else
 		return;
-	
 #endif
 }

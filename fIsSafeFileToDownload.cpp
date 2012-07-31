@@ -1,6 +1,5 @@
 #include <extdll.h>
 #include <meta_api.h>
-#include <comp_dep.h>
 
 #include <fstream>
 #include <vector>
@@ -82,6 +81,7 @@ C_DLLEXPORT DLLVISIBLE int IsSafeFile(const char *filename)
 {
 	if (CVAR_GET_FLOAT("developer") != 0.0)
 		ALERT(at_logged, "[Floodblocker]: Check next filename for downloading: %s\n", filename);
+	
 	for (unsigned int i = 0; i < goodexts.size(); i++)
 	{
 		if (strlen(filename)-goodexts.at(i)->size() > 0 && !strcasecmp(filename+strlen(filename)-goodexts.at(i)->size(), goodexts.at(i)->c_str()))

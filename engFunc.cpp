@@ -162,6 +162,7 @@ void *FindFunction (function *func)
 	{
 		return FindFunction(func->lib, func->sig);
 	}
+	
 	if (CVAR_GET_FLOAT("developer") != 0.0)
 			ALERT(at_logged, "[Floodblocker]: Function %s founded by NAME\n", func->name);
 	return address;

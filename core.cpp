@@ -1,6 +1,5 @@
 #include <extdll.h>
 #include <meta_api.h>
-#include <comp_dep.h>
 
 #include <vector>
 #include <string>
@@ -72,6 +71,15 @@ C_DLLEXPORT DLLVISIBLE int Meta_Attach(PLUG_LOADTIME now, META_FUNCTIONS *pFunct
 		
 		if(CreateFunctionHook(&sv_connect_client))
 		{
+			#if !defined _WIN32
+				if((net_from = (netadr_t *)DLSYM((DLHANDLE)sv_connect_client.lib->handler, "net_from")) == NULL)
+				{
+					if (CVAR_GET_FLOAT("developer") != 0.0)
+						ALERT(at_logged, "[FloodBlocker]: net_from structure not founded.\n");
+
+					return FALSE;
+				}
+			#endif
 			SetHook(&sv_connect_client);
 		}
 		else
